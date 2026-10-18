@@ -1,0 +1,10 @@
+# Only app.py and requirements.txt are needed in the image
+.venv/
+__pycache__/
+.pytest_cache/
+tests/
+scripts/
+*.md
+config.env
+.gcloudignore
+.dockerignore

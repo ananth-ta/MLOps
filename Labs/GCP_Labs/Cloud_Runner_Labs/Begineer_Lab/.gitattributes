@@ -1,0 +1,5 @@
+# Shell scripts, config and Dockerfile must keep LF line endings even on Windows checkouts;
+# bash and the Linux build container fail on CRLF ("$'\r': command not found")
+*.sh       text eol=lf
+config.env text eol=lf
+Dockerfile text eol=lf

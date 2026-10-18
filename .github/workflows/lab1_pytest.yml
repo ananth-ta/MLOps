@@ -1,0 +1,54 @@
+name: Lab 1 - Testing with Pytest
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Labs/Github_Labs/Lab1/**'
+      - '.github/workflows/lab1_pytest.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Labs/Github_Labs/Lab1/**'
+      - '.github/workflows/lab1_pytest.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Labs/Github_Labs/Lab1
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run tests and generate XML report
+      run: pytest --junitxml=pytest-report.xml
+
+    # `uses:` steps ignore working-directory, so the path is relative to the repo root
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lab1-pytest-results
+        path: Labs/Github_Labs/Lab1/pytest-report.xml
+
+    - name: Notify on success
+      if: success()
+      run: echo "Tests passed successfully"
+
+    - name: Notify on failure
+      if: failure()
+      run: echo "Tests failed"
