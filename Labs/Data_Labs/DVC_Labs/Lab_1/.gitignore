@@ -1,3 +1,10 @@
-DVC_Lab/
-*.dvcignore
+# The fork's root .gitignore ignores *.dvc, but DVC pointer files MUST be committed:
+# they are how Git knows which version of the data belongs to each commit
+!*.dvc
+
+# Never commit credentials (e.g. service-account keys); metrics are YAML for this reason
 *.json
+
+.venv/
+__pycache__/
+.pytest_cache/

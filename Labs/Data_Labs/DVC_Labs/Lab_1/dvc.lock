@@ -1,0 +1,92 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/prepare.py
+    deps:
+    - path: data/raw/CC_GENERAL.csv
+      hash: md5
+      md5: 046c43e101182a529f90d7723641f00f
+      size: 458859
+    - path: src/common.py
+      hash: md5
+      md5: 61b848f5d6188e1e0585e738eed9a7f6
+      size: 864
+    - path: src/prepare.py
+      hash: md5
+      md5: 3d2a2ff19c23be6d90a13b03bf691233
+      size: 2539
+    params:
+      params.yaml:
+        prepare:
+          log_transform: true
+          scaler: standard
+    outs:
+    - path: data/processed/features.csv
+      hash: md5
+      md5: 1ac766b2dd2cf24625496901c710f519
+      size: 725160
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/processed/features.csv
+      hash: md5
+      md5: 1ac766b2dd2cf24625496901c710f519
+      size: 725160
+    - path: src/common.py
+      hash: md5
+      md5: 61b848f5d6188e1e0585e738eed9a7f6
+      size: 864
+    - path: src/train.py
+      hash: md5
+      md5: a7963a176b40e9407390986ccf0db89a
+      size: 675
+    params:
+      params.yaml:
+        train:
+          n_clusters: 4
+          n_init: 10
+          random_state: 42
+    outs:
+    - path: models/kmeans.pkl
+      hash: md5
+      md5: dfb991a28b2607473112a79b0847f163
+      size: 19847
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+    - path: data/processed/features.csv
+      hash: md5
+      md5: 1ac766b2dd2cf24625496901c710f519
+      size: 725160
+    - path: models/kmeans.pkl
+      hash: md5
+      md5: dfb991a28b2607473112a79b0847f163
+      size: 19847
+    - path: src/common.py
+      hash: md5
+      md5: 61b848f5d6188e1e0585e738eed9a7f6
+      size: 864
+    - path: src/evaluate.py
+      hash: md5
+      md5: 80b4b8e1f9847933486169d6979105d5
+      size: 2079
+    params:
+      params.yaml:
+        evaluate:
+          elbow_k_min: 2
+          elbow_k_max: 10
+        train.n_init: 10
+        train.random_state: 42
+    outs:
+    - path: metrics/cluster_sizes.csv
+      hash: md5
+      md5: 43404e4c0ccb16cec35b7c041a1c1f59
+      size: 44
+    - path: metrics/elbow.csv
+      hash: md5
+      md5: eeff32afc1b5515b83f650aba4bddd23
+      size: 110
+    - path: metrics/metrics.yaml
+      hash: md5
+      md5: 7134b3528865933971d6cbfd376ddecd
+      size: 92

@@ -1,0 +1,9 @@
+# DVC hashes files byte-for-byte. With Windows' core.autocrlf, a file checked out with CRLF
+# hashes differently than the same file on Linux, and DVC would report the pipeline as changed.
+# Forcing LF keeps hashes identical on every OS (and keeps bash scripts runnable).
+*.py   text eol=lf
+*.yaml text eol=lf
+*.lock text eol=lf
+*.dvc  text eol=lf
+*.sh   text eol=lf
+*.csv  text eol=lf

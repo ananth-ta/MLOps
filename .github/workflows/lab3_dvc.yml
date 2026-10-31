@@ -1,0 +1,67 @@
+name: Lab 3 - DVC Pipeline Reproducibility
+
+# Checks that the committed DVC pipeline state is honest and reproducible:
+#   1. the data pulled from the public remote matches the committed pointer files,
+#   2. dvc.lock matches the committed code, params and data (nothing changed without `dvc repro`),
+#   3. re-running the whole pipeline from scratch reproduces the committed metrics.
+# No credentials are needed: data is pulled from the bucket's public read-only HTTPS remote.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Labs/Data_Labs/DVC_Labs/Lab_1/**'
+      - '.github/workflows/lab3_dvc.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Labs/Data_Labs/DVC_Labs/Lab_1/**'
+      - '.github/workflows/lab3_dvc.yml'
+  workflow_dispatch:
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Labs/Data_Labs/DVC_Labs/Lab_1
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt pytest
+
+    - name: Unit tests
+      run: pytest -v tests
+
+    - name: Pull data and pipeline outputs from the public remote
+      run: dvc pull -r public
+
+    - name: Check dvc.lock matches committed code, params and data
+      run: |
+        dvc status
+        # -q: no output, exit code 1 if anything is out of date
+        dvc status -q
+
+    - name: Re-run the full pipeline from scratch
+      run: |
+        cp metrics/metrics.yaml "$RUNNER_TEMP/committed_metrics.yaml"
+        dvc repro --force
+
+    - name: Check the metrics reproduce
+      run: python scripts/compare_metrics.py "$RUNNER_TEMP/committed_metrics.yaml" metrics/metrics.yaml
+
+    - name: Show pipeline and metrics
+      if: always()
+      run: |
+        dvc dag
+        dvc metrics show

@@ -1,0 +1,51 @@
+# Reproducible pipeline: raw data -> features -> KMeans model -> metrics and plots.
+# `dvc repro` reruns only the stages whose deps, params or code changed.
+stages:
+  prepare:
+    cmd: python src/prepare.py
+    deps:
+      - data/raw/CC_GENERAL.csv
+      - src/prepare.py
+      - src/common.py
+    params:
+      - prepare
+    outs:
+      - data/processed/features.csv
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - data/processed/features.csv
+      - src/train.py
+      - src/common.py
+    params:
+      - train
+    outs:
+      - models/kmeans.pkl
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - data/processed/features.csv
+      - models/kmeans.pkl
+      - src/evaluate.py
+      - src/common.py
+    params:
+      - train.n_init
+      - train.random_state
+      - evaluate
+    metrics:
+      - metrics/metrics.yaml:
+          cache: false
+    plots:
+      - metrics/elbow.csv:
+          cache: false
+          x: k
+          y: inertia
+          title: Elbow curve (KMeans inertia vs k)
+      - metrics/cluster_sizes.csv:
+          cache: false
+          x: cluster
+          y: customers
+          template: bar_horizontal
+          title: Customers per cluster

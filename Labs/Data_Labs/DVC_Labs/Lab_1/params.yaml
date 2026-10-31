@@ -1,0 +1,15 @@
+prepare:
+  # Heavily right-skewed money/frequency columns are log1p-transformed before scaling
+  log_transform: true
+  # One of: standard, minmax, robust
+  scaler: standard
+
+train:
+  n_clusters: 4
+  n_init: 10
+  random_state: 42
+
+evaluate:
+  # Range of k for the elbow curve (inertia vs number of clusters)
+  elbow_k_min: 2
+  elbow_k_max: 10
