@@ -5,8 +5,8 @@ stages:
     deps:
     - path: data/raw/CC_GENERAL.csv
       hash: md5
-      md5: 046c43e101182a529f90d7723641f00f
-      size: 458859
+      md5: c9b0bb7fc9e241b81da92c3528103664
+      size: 902879
     - path: src/common.py
       hash: md5
       md5: 61b848f5d6188e1e0585e738eed9a7f6
@@ -23,15 +23,15 @@ stages:
     outs:
     - path: data/processed/features.csv
       hash: md5
-      md5: 1ac766b2dd2cf24625496901c710f519
-      size: 725160
+      md5: 64c2ace1121a2acc1a4f6cc3d715c0ee
+      size: 1444470
   train:
     cmd: python src/train.py
     deps:
     - path: data/processed/features.csv
       hash: md5
-      md5: 1ac766b2dd2cf24625496901c710f519
-      size: 725160
+      md5: 64c2ace1121a2acc1a4f6cc3d715c0ee
+      size: 1444470
     - path: src/common.py
       hash: md5
       md5: 61b848f5d6188e1e0585e738eed9a7f6
@@ -49,19 +49,19 @@ stages:
     outs:
     - path: models/kmeans.pkl
       hash: md5
-      md5: dfb991a28b2607473112a79b0847f163
-      size: 19847
+      md5: b3bf33e4a4c3d4393288921a60808b09
+      size: 37647
   evaluate:
     cmd: python src/evaluate.py
     deps:
     - path: data/processed/features.csv
       hash: md5
-      md5: 1ac766b2dd2cf24625496901c710f519
-      size: 725160
+      md5: 64c2ace1121a2acc1a4f6cc3d715c0ee
+      size: 1444470
     - path: models/kmeans.pkl
       hash: md5
-      md5: dfb991a28b2607473112a79b0847f163
-      size: 19847
+      md5: b3bf33e4a4c3d4393288921a60808b09
+      size: 37647
     - path: src/common.py
       hash: md5
       md5: 61b848f5d6188e1e0585e738eed9a7f6
@@ -80,13 +80,13 @@ stages:
     outs:
     - path: metrics/cluster_sizes.csv
       hash: md5
-      md5: 43404e4c0ccb16cec35b7c041a1c1f59
-      size: 44
+      md5: 840119d7488cc7ad368eae4fbf02c195
+      size: 46
     - path: metrics/elbow.csv
       hash: md5
-      md5: eeff32afc1b5515b83f650aba4bddd23
+      md5: 55f6736439e9719bd772ffe6967b4eca
       size: 110
     - path: metrics/metrics.yaml
       hash: md5
-      md5: 7134b3528865933971d6cbfd376ddecd
+      md5: 85afdbc063e2e49bfe86c9756a1dc3e9
       size: 92

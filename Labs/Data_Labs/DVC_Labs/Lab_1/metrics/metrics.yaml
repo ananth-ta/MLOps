@@ -1,5 +1,5 @@
-n_customers: 4500
+n_customers: 8950
 n_clusters: 4
-inertia: 43491.64
-silhouette: 0.2145
-davies_bouldin: 1.6634
+inertia: 86547.01
+silhouette: 0.2166
+davies_bouldin: 1.6876
