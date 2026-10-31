@@ -15,5 +15,6 @@ Labs are selected from the official list in the course repository, with one lab 
 |---|-----|-------|------------|
 | 1 | [Github_Labs/Lab1](Labs/Github_Labs/Lab1/) | GitHub Actions (CI with Pytest & Unittest) | [Lab Assignment 1](https://northeastern.instructure.com/courses/264015/assignments/3497092) |
 | 2 | [GCP_Labs/Cloud_Runner_Labs/Begineer_Lab](Labs/GCP_Labs/Cloud_Runner_Labs/Begineer_Lab/) | GCP - Cloud Run (container deployment, autoscaling, canary releases) | [Lab Assignment 2](https://northeastern.instructure.com/courses/264015/assignments/3497093) |
+| 3 | [Data_Labs/DVC_Labs/Lab_1](Labs/Data_Labs/DVC_Labs/Lab_1/) | DVC (data versioning, reproducible pipelines, experiments) | [Lab Assignment 3](https://northeastern.instructure.com/courses/264015/assignments/3497094) |
 
 Lab 1 was originally submitted from [ananth-ta/IE7374-MLOps-Labs](https://github.com/ananth-ta/IE7374-MLOps-Labs), which is now archived.

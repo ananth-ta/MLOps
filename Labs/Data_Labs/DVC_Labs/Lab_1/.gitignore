@@ -7,5 +7,6 @@
 
 .venv/
 .venv-wsl/
+dvc_plots/
 __pycache__/
 .pytest_cache/

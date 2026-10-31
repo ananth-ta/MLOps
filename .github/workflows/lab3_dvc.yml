@@ -1,10 +1,10 @@
-name: Lab 3 - DVC Pipeline Reproducibility
+name: Lab 3 - DVC Pipeline Checks
 
-# Checks that the committed DVC pipeline state is honest and reproducible:
-#   1. the data pulled from the public remote matches the committed pointer files,
-#   2. dvc.lock matches the committed code, params and data (nothing changed without `dvc repro`),
-#   3. re-running the whole pipeline from scratch reproduces the committed metrics.
-# No credentials are needed: data is pulled from the bucket's public read-only HTTPS remote.
+# The real dataset lives in a private Cloud Storage bucket, so CI never sees it. Instead it checks:
+#   1. unit tests pass,
+#   2. dvc.lock matches the committed code and params, i.e. nobody changed the pipeline and
+#      committed without running `dvc repro` (so the committed metrics belong to the committed code),
+#   3. the whole pipeline runs end to end on Linux, using synthetic data with the real schema.
 
 on:
   push:
@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  reproduce:
+  check:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -43,25 +43,16 @@ jobs:
     - name: Unit tests
       run: pytest -v tests
 
-    - name: Pull data and pipeline outputs from the public remote
-      run: dvc pull -r public
-
-    - name: Check dvc.lock matches committed code, params and data
+    - name: Check dvc.lock matches committed code and params
       run: |
-        dvc status
-        # -q: no output, exit code 1 if anything is out of date
-        dvc status -q
+        dvc status || true   # shown for the log; data is expectedly missing
+        python scripts/check_lock.py
 
-    - name: Re-run the full pipeline from scratch
+    - name: Smoke-test the full pipeline on synthetic data
       run: |
-        cp metrics/metrics.yaml "$RUNNER_TEMP/committed_metrics.yaml"
+        python scripts/make_synthetic_data.py --rows 500
         dvc repro --force
-
-    - name: Check the metrics reproduce
-      run: python scripts/compare_metrics.py "$RUNNER_TEMP/committed_metrics.yaml" metrics/metrics.yaml
-
-    - name: Show pipeline and metrics
-      if: always()
-      run: |
-        dvc dag
         dvc metrics show
+
+    - name: Show the pipeline graph
+      run: dvc dag

@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# Create a Cloud Storage bucket and configure it as this project's DVC remotes:
-#   gcs     gs://<bucket>                              default remote; push/pull with your Google login
-#   public  https://storage.googleapis.com/<bucket>    read-only; anyone can `dvc pull -r public`
+# Create a private Cloud Storage bucket and configure it as this project's default DVC remote:
+#   gcs     gs://<bucket>     push/pull with your own Google login
 #
 # Authentication uses Application Default Credentials (`gcloud auth application-default login`),
 # so no service-account key file is created or stored anywhere.
 #
-# Usage: PROJECT_ID=my-project bash scripts/setup_remote.sh [--private]
-#   --private   don't make the bucket publicly readable (skip the `public` remote)
+# Usage: PROJECT_ID=my-project bash scripts/setup_remote.sh [--public]
+#   --public   ALSO make the bucket publicly readable and add a read-only `public` remote
+#              (https://storage.googleapis.com/<bucket>), so anyone can `dvc pull -r public`
+#              without an account. Off by default; only use it for data you may publish.
 # Optional: BUCKET (default <project>-dvc-lab), REGION (default us-east1)
 set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:?set PROJECT_ID first, e.g. export PROJECT_ID=my-project (see: gcloud projects list)}"
 BUCKET="${BUCKET:-${PROJECT_ID}-dvc-lab}"
 REGION="${REGION:-us-east1}"
-PUBLIC=true
-[[ "${1:-}" == "--private" ]] && PUBLIC=false
+PUBLIC=false
+[[ "${1:-}" == "--public" ]] && PUBLIC=true
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -41,7 +42,7 @@ dvc remote add --force --default gcs "gs://$BUCKET"
 dvc remote modify gcs projectname "$PROJECT_ID"
 
 if $PUBLIC; then
-    echo "==> Granting public read access (the dataset is CC0 public domain)"
+    echo "==> Granting public read access to gs://$BUCKET"
     gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --project "$PROJECT_ID" \
         --member allUsers --role roles/storage.objectViewer >/dev/null
     echo "==> Configuring DVC remote 'public' (read-only HTTPS)"

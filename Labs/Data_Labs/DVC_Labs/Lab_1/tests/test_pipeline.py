@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import check_lock
 import compare_metrics
 import fetch_data
 from prepare import EXPECTED_COLUMNS, ID_COLUMN, LOG_COLUMNS, build_features
@@ -96,3 +97,30 @@ def test_metrics_real_change_fails():
 
 def test_metrics_missing_key_fails():
     assert compare_metrics.compare({"a": 1, "b": 2}, {"a": 1}, 1e-3) == ["b: present in only one file"]
+
+
+# ---------- check_lock (CI: lock must match committed code/params) ----------
+
+def test_lock_check_ignores_missing_private_data():
+    status = {
+        "prepare": [{"changed deps": {"data/raw/CC_GENERAL.csv": "deleted"}},
+                    {"changed outs": {"data/processed/features.csv": "not in cache"}}],
+        "data/raw/CC_GENERAL.csv.dvc": [{"changed outs": {"data/raw/CC_GENERAL.csv": "deleted"}}],
+    }
+    assert check_lock.problems_from_status(status) == []
+
+
+def test_lock_check_flags_modified_code():
+    status = {"train": [{"changed deps": {"src/train.py": "modified"}}]}
+    assert check_lock.problems_from_status(status) == ["train: changed deps src/train.py modified"]
+
+
+def test_lock_check_flags_changed_param():
+    status = {"train": [{"changed deps": {"params.yaml": {"train.n_clusters": "modified"}}}]}
+    assert check_lock.problems_from_status(status) == [
+        "train: changed deps params.yaml:train.n_clusters modified"]
+
+
+def test_lock_check_flags_changed_command():
+    assert check_lock.problems_from_status({"evaluate": ["changed command"]}) == [
+        "evaluate: changed command"]
