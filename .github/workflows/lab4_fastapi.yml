@@ -1,0 +1,53 @@
+name: Lab 4 - FastAPI Model API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Labs/API_Labs/FastAPI_Labs/**'
+      - '.github/workflows/lab4_fastapi.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Labs/API_Labs/FastAPI_Labs/**'
+      - '.github/workflows/lab4_fastapi.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Labs/API_Labs/FastAPI_Labs
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      run: pip install -r requirements-dev.txt
+
+    - name: Retrain the model from scratch
+      run: python src/train.py
+
+    - name: API tests
+      run: pytest -v tests
+
+    - name: Smoke-test the real server
+      run: |
+        uvicorn main:app --app-dir src --port 8000 &
+        for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 1; done
+        echo
+        curl -sf localhost:8000/health | grep '"model_loaded":true'
+        curl -sf -X POST localhost:8000/predict -H 'Content-Type: application/json' \
+          -d '{"sepal_length":5.1,"sepal_width":3.5,"petal_length":1.4,"petal_width":0.2}' | tee /dev/stderr | grep '"species":"setosa"'
+        # Invalid input must be rejected with 422
+        test "$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/predict -H 'Content-Type: application/json' \
+          -d '{"sepal_length":5.1,"sepal_width":3.5,"petal_length":-1,"petal_width":0.2}')" = 422

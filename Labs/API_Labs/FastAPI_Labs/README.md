@@ -1,150 +1,216 @@
+# FastAPI Lab: Serving an ML Model as a Production-Style API
 
----
-- Video Explanation: [FastAPI lab](https://www.youtube.com/watch?v=KReburHqRIQ&list=PLcS4TrUUc53LeKBIyXAaERFKBJ3dvc9GZ&index=4)
-- Blog: [FastAPI Lab-1](https://www.mlwithramin.com/blog/fastapi-lab1)
+This lab serves a trained scikit-learn model over HTTP with **FastAPI** and **uvicorn**. The original lab is kept in [instructions.md](instructions.md). It trains a decision tree on the Iris dataset and exposes a single `/predict` endpoint that returns a bare class number.
 
----
+This version makes the API behave like a real model service:
 
-## Overview
-
-In this Lab, we will learn how to expose ML models as APIs using [FastAPI](https://fastapi.tiangolo.com/) and [uvicorn](https://www.uvicorn.org/).
-1. **FastAPI**: FastAPI is a modern, fast (high-performance), web framework for building APIs with Python based on standard Python type hints.
-2. **uvicorn**: Uvicorn is an [Asynchronous Server Gateway Interface - ASGI](https://youtu.be/vKjCkeJGbNk) web server implementation for Python. It is often used to serve FastAPI aplications.
-
-The workflow involves the following steps:
-1. Training a Decision Tree Classifier on Iris Dataset.
-2. Serving the trained model as an API using FastAPI and uvicorn.
-
-## Setting up the lab
-
-1. Create a virtual environment(e.g. **fastapi_lab1_env**).
-2. Activate the environment and install the required packages using `pip install -r requirements.txt`.
-
-### Project structure
-
-```
-mlops_labs
-└── fastapi_lab1
-    ├── assets/
-    ├── fastapi_lab1_env/
-    ├── model/
-    │   └── iris_model.pkl
-    ├── src/
-    │   ├── __init__.py
-    │   ├── data.py
-    │   ├── main.py
-    │   ├── predict.py
-    │   └── train.py
-    ├── README.md
-    └── requirements.txt
-```
-
-Note:
-- **fastapi[all]** in **requirements.txt** will install optional additional dependencies for fastapi which contains **uvicorn** too.
-
-## Running the Lab
-
-1. First step is to train a Decision Tree Classifier(Although you have **`model/iris_model.pkl`** when you cloned from the repo, let's create a new model). To do this, move into **src/** folder with
-    ```bash
-    cd src
-    ```
-2. To train the Decision Tree Classifier, run:
-    ```bash
-    python train.py
-    ```
-3. To serve the trained model as an API, run:
-    ```bash
-    uvicorn app:main --reload
-    ```
-4. Testing endpoints - to view the documentation of your api model you can use [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (or) [http://localhost:8000/docs](http://localhost:8000/docs) after you run you run your FastAPI app.
-    
-![API page](assets/docs.png)
-   
-You can also test out the results of your endpoints by interacting with them. Click on the dropdown button of your endpoint -> Try it out -> Fill the Request body -> Click on Execute button.
-
-![API response](assets/api_response.png)
-
-- You can also use other tools like [Postman](https://www.postman.com/) for API testing.
-
-### FastAPI Syntax
-
-- The instance of FASTAPI class can be defined as:
-    ```bash
-    app = FastAPI()
-     ```
-- When you run a FastAPI application, you often pass this app instance to an ASGI server uvicorn. The server then uses the app instance to handle incoming web requests and send responses based on the routes and logic you’ve defined in your FastAPI application.
-- To run a FastAPI application, run:
-    ```
-    uvicorn main:app --reload
-    ```
-- In this command, **main** is the name of the Python file containing your app instance (without the .py extension), and **app** is the name of the instance itself. The **--reload** flag tells uvicorn to restart the server whenever code changes are detected, which is useful during development and should not be used in production.
-- All the functions which should be used as API should be prefixed by **@app.get("/followed_by_endpoint_name")** or **@app.post("/followed_by_endpoint_name")**. This particular syntax is used to define route handlers (which function should handle an incoming request based on the URL and HTTP method), which are the functions responsible for responding to client requests to a given endpoint.
-    1. **Decorator (@)**: This symbol is used to define a decorator, which is a way to dynamically add functionality to functions or methods. In FastAPI, decorators are used to associate a function with a particular HTTP method and path.
-    2. **App Instance (app)**: This represents an instance of the FastAPI class. It is the core of your application and maintains the list of defined routes, request handlers, and other configurations.
-    3. **HTTP Method (get, post, etc.)**: The HTTP method specifies the type of HTTP request the route will respond to. For example, get is used for retrieving data, and post is used for sending data to the server. FastAPI provides a decorator for each standard HTTP method, such as @app.put, @app.delete, @app.patch, and @app.options, allowing you to define handlers for different types of client requests. For detailed info refer to this webiste by [Mdn](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods).
-    4. **Path/Endpoint ("/endpoint_name")**: This is the URL path where the API will be accessible. When a client makes a request to this path using the specified HTTP method, FastAPI will execute the associated function and return the response.
-- Using **async** in FastAPI allows for non-blocking operations, enabling the server to handle other requests while waiting for I/O tasks, like database queries or model loading, to complete. This leads to improved concurrency and resource utilization, enhancing the application's ability to manage multiple simultaneous requests efficiently.
-
-### Data Models in FastAPI
-
-##### 1. IrisData class
-
-```python
-class IrisData(BaseModel):
-    petal_length: float
-    sepal_length:float
-    petal_width:float
-    sepal_width:float
-```
-
-The **IrisData** class is a [Pydantic model](https://docs.pydantic.dev/latest/concepts/models/) which defines the expected structure of the data for a request body. When you use it as a type annotation for a route operation parameter, FastAPI will perform the following actions:
-- **Request Body Reading:** FastAPI will read the request body as JSON.
-- **Data Conversion:** It will convert the corresponding types, if necessary.
-- **Data Validation:** It will validate the data. If the data is invalid, it will return a 422 Unprocessable Entity error response with details about what was incorrect.
-
-#### 2. IrisResponse class
-
-```python
-class IrisResponse(BaseModel):
-    response:int
-```
-
-The **IrisResponse** class is another Pydantic model that defines the structure of the response data for an endpoint. When you specify **response_model=IrisResponse** in a route operation, it tells FastAPI to:
-- **Serialize the Output**: Convert the output data to JSON format according to the IrisResponse model.
-- **Document the API**: Include the IrisResponse model in the generated API documentation, so API consumers know what to expect in the response.
+- **Strict input validation:** impossible measurements and misspelt fields are rejected with clear `422` errors.
+- **Useful responses:** the species name, the probability of each species, and the model version.
+- **Batch predictions:** up to 100 flowers in one request.
+- **The model is loaded once at startup**, with `/health` and `/model-info` for monitoring, and a proper `503` when no model is available.
+- **Tests and CI** that run the real server.
 
 ---
 
-### FastAPI features
+## What changed from the original lab
 
-1. **Request Body Reading**: When a client sends a request to a FastAPI endpoint, the request can include a body with data. For routes that expect data (commonly POST, PUT, or PATCH requests), this data is often in JSON format. FastAPI automatically reads the request body by checking the Content-Type header, which should be set to application/json for JSON payloads.
-2. **Data Conversion**: Once the request body is read, FastAPI utilizes Pydantic models to parse the JSON data. Pydantic attempts to construct an instance of the specified model using the data from the request body. During this instantiation, Pydantic converts the JSON data into the proper Python data types as declared in the model.
-    - For instance, if the JSON object has a field like petal_length with a value of "5.1" (a string), and the model expects a float, Pydantic will transform the string into a float. If conversion isn't possible (say, the value was "five point one"), Pydantic will raise a validation error.
-3. **Data Validation**: Pydantic checks that all required fields are present and that the values are of the correct type, adhering to any constraints defined in the model (such as string length or number range). If the validation passes, the endpoint has a verified Python object to work with. If validation fails (due to missing fields, incorrect types, or constraint violations), FastAPI responds with a 422 Unprocessable Entity status. This response includes a JSON body detailing the validation errors, aiding clients in correcting their request data.
-4. **Error Handling**: Error handling in FastAPI can be effectively managed using the HTTPException class. HTTPException is used to explicitly signal an HTTP error status code and return additional details about the error. When an HTTPException is raised within a route, FastAPI will catch the exception and use its content to form the HTTP response.
-- **Instantiation**: The HTTPException class is instantiated with at least two arguments: status_code and detail. The status_code argument is an integer that represents the HTTP status code (e.g., 404 for Not Found, 400 for Bad Request). The detail argument is a string or any JSON-encodable object that describes the error.
-- **Response**: When an HTTPException is raised, FastAPI sends an HTTP response with the status code specified. The detail provided in the HTTPException is sent as the body of the response in JSON format.
+### Problems fixed
 
-```python
-from fastapi import FastAPI, HTTPException
+| Original | Problem | Fix |
+|---|---|---|
+| README: `uvicorn app:main --reload` | Wrong module/variable order; the command fails. | `uvicorn main:app --app-dir src` (see [Running](#running-the-api)). |
+| `joblib.load("../model/iris_model.pkl")` inside `predict_data` | The model was **reloaded from disk on every request**, and the relative path only worked when started from inside `src/`. | Loaded **once at startup** (FastAPI `lifespan`), from a path resolved relative to the code; works from any directory. |
+| `scikit-learn==1.5.1`, `fastapi[all]==0.111.1` | scikit-learn 1.5.1 doesn't install on Python 3.13; `[all]` pulls in many unused packages. | Five pinned packages ([requirements.txt](requirements.txt)), all Python 3.13 compatible. |
+| Committed `iris_model.pkl` saved with scikit-learn 1.5.1 | Loading a model pickled by a different scikit-learn version is unsupported and can silently misbehave. | Retrained with the pinned version, and the version is recorded inside the model file. |
+| `petal_length: float` (no limits) | `-1.4` or `500` cm gets a confident prediction. | Range limits on every field (below). |
+| Response `{"response": 0}` | A bare number: the client must know that 0 means setosa, and has no idea how confident the model is. | Species name, class id, per-species probabilities, model version. |
+| `async def` endpoints calling the model | A blocking, CPU-bound call inside `async def` blocks the event loop, so **every** other request waits. | Plain `def` endpoints: FastAPI runs them in a worker thread. |
+| `except Exception: raise HTTPException(500, str(e))` | Turns every problem, including bad input, into a 500 that leaks internal error text. | Bad input → 422 from validation; missing model → 503 with a fix-it message. |
+| Train/test split created but never used | No idea how good the served model is. | Held-out accuracy (stratified split) is measured, saved with the model, and reported by `/model-info`. |
 
-app = FastAPI()
+### Added
 
-@app.get("/items/{item_id}")
-async def read_item(item_id: int):
-    item = get_item_by_id(item_id)  # Hypothetical function to fetch an item
-    if item is None:
-        raise HTTPException(status_code=404, detail=f"Item with ID {item_id} not found")
-    return item
+**1. Input validation** ([src/main.py](src/main.py)). Each measurement must be a number, greater than 0, and below a generous ceiling: several times larger than any real iris.
+
+| Field | Allowed (cm) | Largest in the dataset |
+|---|---|---|
+| `sepal_length` | 0 < x ≤ 15 | 7.9 |
+| `sepal_width` | 0 < x ≤ 10 | 4.4 |
+| `petal_length` | 0 < x ≤ 15 | 6.9 |
+| `petal_width` | 0 < x ≤ 5 | 2.5 |
+
+Unknown fields are rejected (`extra="forbid"`). Without this, a typo such as `petal_lenght` would only be reported as a missing field, hiding the actual mistake.
+
+**2. Endpoints**
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | `ok` + `model_loaded: true`, or `degraded` if no model loaded. For load balancers and monitoring. |
+| GET | `/model-info` | Model version, algorithm, feature order, class names, held-out accuracy, training time, scikit-learn version. |
+| POST | `/predict` | One flower → species, class id, probabilities, model version. |
+| POST | `/predict/batch` | 1–100 flowers in one request and one model call; results in request order. |
+| GET | `/docs` | Interactive Swagger documentation, generated by FastAPI. |
+
+**3. One model file with its metadata** ([src/train.py](src/train.py)). The model is saved together with its feature order, class names and version, so these can't drift apart. Features are passed to the model **by name**, never by the order of fields in the JSON. The original built its feature list by position, which works only as long as nobody reorders the code.
+
+**4. Tests** ([tests/test_api.py](tests/test_api.py)): 19 tests through FastAPI's `TestClient`, covering:
+- all three species
+- every validation rule
+- batch order and size limits, and that batch results match single predictions
+- a missing model, and rejecting the original lab's bare model file
+
+**5. CI** ([lab4_fastapi.yml](../../../.github/workflows/lab4_fastapi.yml)): on every push touching this lab it retrains the model from scratch, runs the tests, then **starts the real uvicorn server** and checks a prediction and a rejected input over HTTP.
+
+---
+
+## Project structure
+```
+FastAPI_Labs/
+├── model/
+│   └── iris_model.pkl      # model + metadata bundle (written by src/train.py)
+├── src/
+│   ├── data.py             # load Iris, stratified train/test split
+│   ├── train.py            # train, measure held-out accuracy, save the bundle
+│   ├── predict.py          # load the bundle; predict with probabilities
+│   └── main.py             # the FastAPI app: schemas, validation, endpoints
+├── tests/
+│   ├── conftest.py
+│   └── test_api.py
+├── assets/                 # screenshots from the original lab
+├── requirements.txt        # runtime dependencies
+├── requirements-dev.txt    # + pytest and the test client
+├── instructions.md         # the original lab
+└── README.md
 ```
 
-In this example, **get_item_by_id** is a function that retrieves an item based on its ID. If no item with the given ID is found, an HTTPException with a 404 Not Found status code is raised, and the detail message is customized to include the ID of the item that was not found.
+---
 
-FastAPI will catch this exception and return a response with a 404 status code and a JSON body like this:
+## Prerequisites
 
+| Requirement | Version used | Notes |
+|---|---|---|
+| Python | 3.13 (3.11+ works) | [python.org/downloads](https://www.python.org/downloads/). On Windows, tick **"Add python.exe to PATH"** in the installer. |
+| Git | any recent | [git-scm.com](https://git-scm.com/downloads) |
+| `curl` | any | Built into Windows 10+, macOS and Linux. Optional: the `/docs` page works too. |
+
+Python packages (installed below): `fastapi` 0.163.1, `uvicorn` 0.54.0, `pydantic` 2.14.3, `scikit-learn` 1.9.1, `joblib` 1.6.0; for tests, `pytest` 9.2.0 and `httpx2` 2.16.0.
+
+---
+
+## Setup
+```bash
+git clone https://github.com/ananth-ta/MLOps.git
+cd MLOps/Labs/API_Labs/FastAPI_Labs
+
+python -m venv .venv
+# Windows (PowerShell):         .venv\Scripts\activate
+# Windows (Git Bash):           source .venv/Scripts/activate
+# macOS / Linux:                source .venv/bin/activate
+
+pip install -r requirements-dev.txt
+```
+
+## Train the model
+```bash
+python src/train.py
+```
+```
+Trained DecisionTree v1.1.0: test accuracy 0.9778 on 45 held-out flowers -> iris_model.pkl
+```
+A trained `model/iris_model.pkl` is already included, so this step is optional. Rerun it after changing the model.
+
+## Run the tests
+```bash
+pytest -v tests
+```
+Expected: `19 passed`.
+
+---
+
+## Running the API
+From the lab folder:
+```bash
+uvicorn main:app --app-dir src --reload
+```
+`--app-dir src` tells uvicorn where the code lives. `--reload` restarts the server on code changes; it's for development only. Successful startup:
+```
+INFO:     Started server process [7980]
+INFO:     Waiting for application startup.
+INFO:     Loaded model v1.1.0 from ...\FastAPI_Labs\model\iris_model.pkl
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+```
+Open **http://127.0.0.1:8000/docs** to try every endpoint in the browser, or use `curl` from a second terminal. The outputs below are from an actual run.
+
+> **Windows PowerShell:** `curl` there is an alias for a different command. Use `curl.exe`, or run these in Git Bash.
+
+### Health and model info
+```bash
+curl http://127.0.0.1:8000/health
+```
 ```json
-{
-    "detail": "Item with ID 1 not found"
-}
+{"status":"ok","model_loaded":true}
 ```
-- For more information on how to handle errors in FASTAPI refer to this [documentation](https://fastapi.tiangolo.com/tutorial/handling-errors/).
+```bash
+curl http://127.0.0.1:8000/model-info
+```
+```json
+{"version":"1.1.0","algorithm":"DecisionTreeClassifier","feature_names":["sepal_length","sepal_width","petal_length","petal_width"],"class_names":["setosa","versicolor","virginica"],"test_accuracy":0.9778,"trained_at":"2026-11-16T07:01:05+00:00","sklearn_version":"1.9.1"}
+```
+
+### Predict one flower
+```bash
+curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" \
+     -d '{"sepal_length":6.0,"sepal_width":2.9,"petal_length":4.5,"petal_width":1.5}'
+```
+```json
+{"class_id":1,"species":"versicolor","probabilities":{"setosa":0.0,"versicolor":0.9706,"virginica":0.0294},"model_version":"1.1.0"}
+```
+The probabilities show the model is 97% sure, with a small chance of virginica. The original returned only `{"response": 1}`.
+
+### Predict a batch
+```bash
+curl -X POST http://127.0.0.1:8000/predict/batch -H "Content-Type: application/json" \
+     -d '{"items":[{"sepal_length":5.1,"sepal_width":3.5,"petal_length":1.4,"petal_width":0.2},
+                   {"sepal_length":6.9,"sepal_width":3.1,"petal_length":5.8,"petal_width":2.3}]}'
+```
+```json
+{"count":2,"model_version":"1.1.0","predictions":[{"class_id":0,"species":"setosa","probabilities":{"setosa":1.0,"versicolor":0.0,"virginica":0.0}},{"class_id":2,"species":"virginica","probabilities":{"setosa":0.0,"versicolor":0.0,"virginica":1.0}}]}
+```
+
+### Invalid input is rejected (HTTP 422)
+A negative petal length:
+```bash
+curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" \
+     -d '{"sepal_length":5.1,"sepal_width":3.5,"petal_length":-1.4,"petal_width":0.2}'
+```
+```json
+{"detail":[{"type":"greater_than","loc":["body","petal_length"],"msg":"Input should be greater than 0","input":-1.4,"ctx":{"gt":0.0}}]}
+```
+A misspelt field (`petal_lenght`). Both the missing field **and** the unknown one are reported, so the typo is obvious:
+```json
+{"detail":[{"type":"missing","loc":["body","petal_length"],"msg":"Field required", ...},
+           {"type":"extra_forbidden","loc":["body","petal_lenght"],"msg":"Extra inputs are not permitted","input":1.4}]}
+```
+
+### No model (HTTP 503)
+If `model/iris_model.pkl` is missing, the server still starts. `/health` reports `{"status":"degraded","model_loaded":false}`, and prediction requests return `503` with `"Model is not loaded; train it with python src/train.py and restart"`. Set `MODEL_PATH` to serve a model from another location.
+
+Stop the server with **Ctrl+C**.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `ModuleNotFoundError: No module named 'predict'` | Start uvicorn from the lab folder with `--app-dir src`, as shown above. |
+| `Error loading ASGI app. Could not import module "app"` | You used the original README's `uvicorn app:main`; it should be `main:app`. |
+| `[Errno 10048]` / `address already in use` | Port 8000 is taken (maybe an earlier server): stop it, or add `--port 8001`. |
+| PowerShell `curl` complains about `-X` or `-H` | Use `curl.exe`, or Git Bash. |
+| `/health` shows `degraded` | Run `python src/train.py`, then restart the server. |
+
+---
+
+## Acknowledgements
+Based on the [FastAPI lab](https://github.com/raminmohammadi/MLOps/tree/main/Labs/API_Labs/FastAPI_Labs) from the IE 7374 course repository. Implementation and README written with assistance from Claude Code (Anthropic).
